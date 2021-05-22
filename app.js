@@ -9,8 +9,53 @@ const main = document.getElementById("main");
 const form = document.getElementById("form");
 const search = document.getElementById("search");
 
+const ALLOWED_LONG = '121.0302064';
+const ALLOWED_LAT = '14.344605099999999';
+const NO_ACCESS_MESSAGE = 'Too far away from RYAN_PISOWIFI.';
+var allowAccess = false;
+
+
+// geolocation checking
+getLocation();
+function getLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(calculatePosition);
+    } else { 
+      console.log("Geolocation is not supported by this browser.");
+    }
+  }
+
+function calculatePosition(position){
+
+    var long = position.coords.longitude;
+    var lat = position.coords.latitude;
+
+    if(distance(long, lat, ALLOWED_LONG, ALLOWED_LAT) < 100){
+        allowAccess = true;
+    };
+    startWebPage();
+}
+
+
 // Calling the api.
-showMovies(apiUrl);
+function startWebPage(){
+    if (allowAccess){
+        showMovies(apiUrl);
+    } else {
+        showErrorLocation();
+    }
+}
+
+// shows error location message
+function showErrorLocation(){
+    const main = document.getElementById('main');
+    const h2 = document.createElement('h2');
+    h2.innerHTML = NO_ACCESS_MESSAGE;
+    h2.className = "error";
+    main.appendChild(h2);
+}
+
+
 // Fetching data from the api then looping over each item to create html elements that store our movies.
 function showMovies(url){
     fetch(url).then(res => res.json())
@@ -29,11 +74,16 @@ form.addEventListener("submit", (e) => {
      
     const searchTerm = search.value;
     
-    if (searchTerm) {
-        searchMovies(apiUrl,searchTerm);
+    if(allowAccess){
+        if (searchTerm) {
+            searchMovies(apiUrl,searchTerm);
+        } else {
+            showMovies(apiUrl);
+        }
     } else {
-        showMovies(apiUrl);
+        showErrorLocation();
     }
+
 });
 
 // function to search movies in the static page itself.
@@ -80,4 +130,27 @@ function createElement(element){
         el.appendChild(text);
         main.appendChild(el);
 }
+
+// https://stackoverflow.com/questions/13840516/how-to-find-my-distance-to-a-known-location-in-javascript
+
+
+function distance(lat1, lon1, lat2, lon2) {
+    //Radius of the earth in:  1.609344 miles,  6371 km  | var R = (6371 / 1.609344);
+    var R = 3958.7558657440545; // Radius of earth in Miles 
+    var dLat = toRad(lat2-lat1);
+    var dLon = toRad(lon2-lon1); 
+    var a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2); 
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    var d = R * c;
+    return d;
+}
+
+function toRad(Value) {
+    /** Converts numeric degrees to radians */
+    return Value * Math.PI / 180;
+}
+  
+
 
